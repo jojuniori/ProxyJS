@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OpenClash 配置转换器</title>
+<meta name="description" content="在浏览器中将 Clash 订阅 YAML 一键转换为 OpenClash 软路由配置，支持普通版和 Lite 精简版">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ==================== Reset & Base ==================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg-primary: #0a0e1a;
+    --bg-secondary: #111827;
+    --bg-card: rgba(17, 24, 39, 0.7);
+    --bg-card-hover: rgba(30, 41, 59, 0.8);
+    --border-color: rgba(99, 102, 241, 0.2);
+    --border-glow: rgba(99, 102, 241, 0.5);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+    --accent-indigo: #818cf8;
+    --accent-violet: #a78bfa;
+    --accent-emerald: #34d399;
+    --accent-amber: #fbbf24;
+    --accent-rose: #fb7185;
+    --accent-cyan: #22d3ee;
+    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --gradient-success: linear-gradient(135deg, #34d399 0%, #059669 100%);
+    --gradient-danger: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+    --shadow-glow: 0 0 30px rgba(99, 102, 241, 0.15);
+    --radius: 16px;
+    --radius-sm: 10px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    min-height: 100vh;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* ==================== Background Effects ==================== */
+  body::before {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background:
+      radial-gradient(ellipse 600px 600px at 20% 20%, rgba(99, 102, 241, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 500px 500px at 80% 80%, rgba(167, 139, 250, 0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 400px 400px at 50% 50%, rgba(52, 211, 153, 0.04) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+    animation: bgDrift 20s ease-in-out infinite alternate;
+  }
+
+  @keyframes bgDrift {
+    0%   { transform: translate(0, 0) rotate(0deg); }
+    100% { transform: translate(-30px, -20px) rotate(2deg); }
+  }
+
+  /* ==================== Container ==================== */
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* ==================== Header ==================== */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+  }
+
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.1);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent-indigo);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  .header-badge::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent-emerald);
+    box-shadow: 0 0 8px var(--accent-emerald);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.5; transform: scale(0.8); }
+  }
+
+  .header h1 {
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #e0e7ff 0%, #818cf8 40%, #a78bfa 70%, #c084fc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+  }
+
+  .header p {
+    color: var(--text-secondary);
+    font-size: 15px;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* ==================== Card ==================== */
+  .card {
+    background: var(--bg-card);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 24px;
+    transition: var(--transition);
+  }
+
+  .card:hover {
+    border-color: var(--border-glow);
+    box-shadow: var(--shadow-glow);
+  }
+
+  .card-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .card-title .icon {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .card-title .icon.upload  { background: rgba(99, 102, 241, 0.15); }
+  .card-title .icon.output  { background: rgba(52, 211, 153, 0.15); }
+  .card-title .icon.log     { background: rgba(251, 191, 36, 0.15); }
+
+  /* ==================== Drop Zone ==================== */
+  .drop-zone {
+    border: 2px dashed rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-sm);
+    padding: 48px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(167, 139, 250, 0.03) 100%);
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .drop-zone:hover,
+  .drop-zone.drag-over {
+    border-color: var(--accent-indigo);
+    background: rgba(99, 102, 241, 0.05);
+  }
+
+  .drop-zone:hover::before,
+  .drop-zone.drag-over::before {
+    opacity: 1;
+  }
+
+  .drop-zone .upload-icon {
+    font-size: 40px;
+    margin-bottom: 12px;
+    display: block;
+    opacity: 0.8;
+  }
+
+  .drop-zone .main-text {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+
+  .drop-zone .sub-text {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .drop-zone input[type="file"] {
+    display: none;
+  }
+
+  /* ==================== File info ==================== */
+  .file-info {
+    display: none;
+    align-items: center;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(99, 102, 241, 0.06);
+    border: 1px solid rgba(99, 102, 241, 0.15);
+    border-radius: var(--radius-sm);
+    margin-top: 16px;
+  }
+
+  .file-info.visible { display: flex; }
+
+  .file-info .file-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background: var(--gradient-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .file-info .file-details {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .file-info .file-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .file-info .file-size {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .file-info .file-remove {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(251, 113, 133, 0.15);
+    color: var(--accent-rose);
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+    flex-shrink: 0;
+  }
+
+  .file-info .file-remove:hover {
+    background: rgba(251, 113, 133, 0.3);
+  }
+
+  /* ==================== Convert Button ==================== */
+  .convert-btn {
+    width: 100%;
+    padding: 16px;
+    border: none;
+    border-radius: var(--radius-sm);
+    background: var(--gradient-primary);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    margin-top: 24px;
+    letter-spacing: 0.3px;
+  }
+
+  .convert-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+    opacity: 0;
+    transition: var(--transition);
+  }
+
+  .convert-btn:hover::before { opacity: 1; }
+
+  .convert-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 30px rgba(99, 102, 241, 0.4);
+  }
+
+  .convert-btn:active { transform: translateY(0); }
+
+  .convert-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .convert-btn:disabled::before { display: none; }
+
+  /* ==================== Results ==================== */
+  .results-section {
+    display: none;
+  }
+
+  .results-section.visible { display: block; }
+
+  .result-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px;
+    background: rgba(30, 41, 59, 0.5);
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+    transition: var(--transition);
+  }
+
+  .result-item:hover {
+    border-color: rgba(99, 102, 241, 0.25);
+    background: rgba(30, 41, 59, 0.7);
+  }
+
+  .result-item .result-info {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    flex: 1;
+  }
+
+  .result-item .result-badge {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .result-badge.full {
+    background: rgba(99, 102, 241, 0.15);
+    color: var(--accent-indigo);
+    border: 1px solid rgba(99, 102, 241, 0.2);
+  }
+
+  .result-badge.lite {
+    background: rgba(34, 211, 238, 0.12);
+    color: var(--accent-cyan);
+    border: 1px solid rgba(34, 211, 238, 0.2);
+  }
+
+  .result-item .result-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .result-item .result-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .result-item .result-stats {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+
+  .download-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--gradient-success);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .download-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(52, 211, 153, 0.4);
+  }
+
+  .download-all-btn {
+    width: 100%;
+    padding: 14px;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--accent-indigo);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 4px;
+  }
+
+  .download-all-btn:hover {
+    background: rgba(99, 102, 241, 0.08);
+    border-color: var(--accent-indigo);
+  }
+
+  /* ==================== Log ==================== */
+  .log-area {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    max-height: 320px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-secondary);
+  }
+
+  .log-area::-webkit-scrollbar { width: 6px; }
+  .log-area::-webkit-scrollbar-track { background: transparent; }
+  .log-area::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.2);
+    border-radius: 3px;
+  }
+
+  .log-line { white-space: pre-wrap; word-break: break-all; }
+  .log-line.info    { color: var(--accent-emerald); }
+  .log-line.warn    { color: var(--accent-amber); }
+  .log-line.error   { color: var(--accent-rose); }
+  .log-line.title   { color: var(--accent-indigo); font-weight: 600; }
+  .log-line.stats   { color: var(--accent-violet); }
+
+  /* ==================== Spinner ==================== */
+  .spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ==================== Footer ==================== */
+  .footer {
+    margin-top: 48px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .footer a {
+    color: var(--accent-indigo);
+    text-decoration: none;
+  }
+
+  /* ==================== Responsive ==================== */
+  @media (max-width: 640px) {
+    .container { padding: 24px 16px 60px; }
+    .header h1 { font-size: 1.8rem; }
+    .card { padding: 20px; }
+    .drop-zone { padding: 32px 16px; }
+    .result-item { flex-direction: column; gap: 12px; align-items: stretch; }
+    .download-btn { width: 100%; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">Browser-Side Converter</div>
+    <h1>OpenClash 配置转换器</h1>
+    <p>上传原始订阅 YAML → 一键生成 OpenClash 普通版 + Lite 精简版配置</p>
+  </div>
+
+  <!-- Upload Card -->
+  <div class="card" id="uploadCard">
+    <div class="card-title">
+      <span class="icon upload">📄</span>
+      上传订阅文件
+    </div>
+    <div class="drop-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".yaml,.yml">
+      <span class="upload-icon">⬆️</span>
+      <div class="main-text">拖拽 YAML 文件到这里，或点击选择</div>
+      <div class="sub-text">支持 .yaml / .yml 格式的 Clash 订阅文件</div>
+    </div>
+    <div class="file-info" id="fileInfo">
+      <div class="file-icon">📋</div>
+      <div class="file-details">
+        <div class="file-name" id="fileName">-</div>
+        <div class="file-size" id="fileSize">-</div>
+      </div>
+      <button class="file-remove" id="fileRemove" title="移除">✕</button>
+    </div>
+    <button class="convert-btn" id="convertBtn" disabled>🚀 开始转换</button>
+  </div>
+
+  <!-- Results Card -->
+  <div class="card results-section" id="resultsCard">
+    <div class="card-title">
+      <span class="icon output">📦</span>
+      转换结果
+    </div>
+    <div id="resultsList"></div>
+    <button class="download-all-btn" id="downloadAllBtn">📥 全部下载</button>
+  </div>
+
+  <!-- Log Card -->
+  <div class="card">
+    <div class="card-title">
+      <span class="icon log">📟</span>
+      转换日志
+    </div>
+    <div class="log-area" id="logArea">
+      <div class="log-line" style="color: var(--text-muted);">等待上传文件...</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    OpenClash Config Converter &middot; 纯浏览器端转换，文件不会上传到任何服务器
+  </div>
+</div>
+
+<!--
+  引入外部依赖：
+  1. js-yaml.js — UMD 格式，浏览器环境自动挂载到 window.jsyaml
+  2. Clash.js — 纯全局脚本，暴露全局 main() 函数和相关配置变量
+-->
+<script src="js-yaml.js"></script>
+<script src="Clash.js"></script>
+
+<script>
+/**
+ * ============================================================
+ *  浏览器端转换逻辑
+ *  将 convert.js 和 convertLite.js 的 Node.js 逻辑重写为浏览器版本
+ *  - 去除 fs、path、process 等 Node.js 依赖
+ *  - 使用 jsyaml (window.jsyaml) 替代 require('./js-yaml.js')
+ *  - 使用全局 main() 替代 require('./Clash.js') 的沙箱执行
+ * ============================================================
+ */
+(function () {
+  'use strict';
+
+  // ==================== DOM 引用 ====================
+  const dropZone    = document.getElementById('dropZone');
+  const fileInput   = document.getElementById('fileInput');
+  const fileInfo    = document.getElementById('fileInfo');
+  const fileName    = document.getElementById('fileName');
+  const fileSize    = document.getElementById('fileSize');
+  const fileRemove  = document.getElementById('fileRemove');
+  const convertBtn  = document.getElementById('convertBtn');
+  const resultsCard = document.getElementById('resultsCard');
+  const resultsList = document.getElementById('resultsList');
+  const downloadAll = document.getElementById('downloadAllBtn');
+  const logArea     = document.getElementById('logArea');
+
+  // ==================== 状态 ====================
+  let rawYamlContent = null;   // 用户上传的原始 YAML 文本
+  let sourceFileName = '';     // 原始文件名
+  let outputBlobs = {};        // { full: { blob, name, stats }, lite: { blob, name, stats } }
+
+  // ==================== 日志工具 ====================
+  function clearLog() {
+    logArea.innerHTML = '';
+  }
+
+  function log(msg, type = '') {
+    const line = document.createElement('div');
+    line.className = 'log-line' + (type ? ' ' + type : '');
+    line.textContent = msg;
+    logArea.appendChild(line);
+    logArea.scrollTop = logArea.scrollHeight;
+  }
+
+  // ==================== 文件上传 ====================
+  dropZone.addEventListener('click', () => fileInput.click());
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    const file = fileInput.files[0];
+    if (file) handleFile(file);
+  });
+
+  fileRemove.addEventListener('click', () => {
+    rawYamlContent = null;
+    sourceFileName = '';
+    fileInput.value = '';
+    fileInfo.classList.remove('visible');
+    convertBtn.disabled = true;
+    resultsCard.classList.remove('visible');
+    outputBlobs = {};
+    clearLog();
+    log('等待上传文件...', '');
+  });
+
+  function handleFile(file) {
+    if (!file.name.match(/\.ya?ml$/i)) {
+      log('❌ 仅支持 .yaml / .yml 文件', 'error');
+      return;
+    }
+    sourceFileName = file.name;
+    fileName.textContent = file.name;
+    fileSize.textContent = formatSize(file.size);
+    fileInfo.classList.add('visible');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      rawYamlContent = e.target.result;
+      convertBtn.disabled = false;
+      clearLog();
+      log('📄 文件已加载: ' + file.name, 'info');
+      log('   大小: ' + formatSize(file.size), '');
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  function formatSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+  }
+
+  // ==================== 转换按钮 ====================
+  convertBtn.addEventListener('click', () => {
+    if (!rawYamlContent) return;
+    // 异步执行，让 UI 先更新
+    convertBtn.disabled = true;
+    convertBtn.innerHTML = '<span class="spinner"></span>转换中...';
+    resultsCard.classList.remove('visible');
+    outputBlobs = {};
+    clearLog();
+    setTimeout(runConversion, 50);
+  });
+
+  // ==================== 核心转换逻辑 ====================
+  function runConversion() {
+    try {
+      // ========== Step 1: 解析原始 YAML ==========
+      log('╔═══════════════════════════════════════════════════╗', 'title');
+      log('║         OpenClash 配置转换 (浏览器版)             ║', 'title');
+      log('╚═══════════════════════════════════════════════════╝', 'title');
+      log('');
+
+      let config = jsyaml.load(rawYamlContent);
+      log('📥 已加载原始订阅: ' + sourceFileName, 'info');
+
+      // ========== Step 2: 执行 Clash.js 的 main() ==========
+      // main() 是 Clash.js 暴露的全局函数
+      log('✅ Clash.js 脚本已加载（通过 <script src> 引入）', 'info');
+      config = main(config);
+      log('✅ main() 执行完毕', 'info');
+
+      // ========== Step 3: convert.js 的后处理逻辑 ==========
+
+      // A. 过滤路由器不支持的规则类型（PROCESS 相关）
+      if (config.rules && Array.isArray(config.rules)) {
+        const originalCount = config.rules.length;
+        config.rules = config.rules.filter((rule) => {
+          return !/^PROCESS-(NAME|PATH|NAME-REGEX|PATH-REGEX),/i.test(rule);
+        });
+        const removedCount = originalCount - config.rules.length;
+        if (removedCount > 0) {
+          log('✅ 已过滤 ' + removedCount + ' 条路由器不支持的进程规则', 'info');
+        }
+      }
+
+      // B. 修正 Rule Provider 路径 (适配 Linux/OpenWrt)
+      if (config['rule-providers']) {
+        Object.keys(config['rule-providers']).forEach((key) => {
+          const provider = config['rule-providers'][key];
+          if (provider.path) {
+            // 提取文件名部分（浏览器端不能用 path.basename，手动实现）
+            const parts = provider.path.replace(/\\/g, '/').split('/');
+            const baseName = parts[parts.length - 1];
+            provider.path = '/etc/openclash/rule_provider/' + baseName;
+          }
+        });
+        log('✅ Rule Providers 路径已修正', 'info');
+      }
+
+      // C. 清理 OpenClash 用不上的配置项
+      const fieldsToRemove = [
+        'cfw-latency-timeout', 'cfw-conn-break-strategy', 'cfw-bypass', 'cfw-profiles',
+        'tun', 'external-ui', 'external-ui-url',
+        'mixed-port', 'redir-port', 'tproxy-port', 'external-controller',
+      ];
+      fieldsToRemove.forEach((field) => delete config[field]);
+      log('✅ 已清理软路由用不上的配置项', 'info');
+
+      // D. 强制 geodata-mode 为 false
+      config['geodata-mode'] = false;
+      log('✅ geodata-mode 已设为 false（分离模式）', 'info');
+
+      // ========== Step 4: 生成普通版 YAML ==========
+      const fullYaml = jsyaml.dump(config, { lineWidth: -1 });
+      const baseName = sourceFileName.replace(/\.ya?ml$/i, '');
+      const fullFileName = baseName + '_openclash.yaml';
+      const fullBlob = new Blob([fullYaml], { type: 'application/x-yaml;charset=utf-8' });
+
+      const fullStats = {
+        proxies: config.proxies?.length || 0,
+        groups: config['proxy-groups']?.length || 0,
+        rules: config.rules?.length || 0,
+        providers: Object.keys(config['rule-providers'] || {}).length,
+      };
+
+      outputBlobs.full = { blob: fullBlob, name: fullFileName, stats: fullStats };
+
+      log('', '');
+      log('═══════════════════════════════════════════════════', 'stats');
+      log('📊 普通版统计:', 'stats');
+      log('   代理节点: ' + fullStats.proxies + ' 个', 'stats');
+      log('   策略组: ' + fullStats.groups + ' 个', 'stats');
+      log('   规则: ' + fullStats.rules + ' 条', 'stats');
+      log('   规则集: ' + fullStats.providers + ' 个', 'stats');
+      log('   输出文件: ' + fullFileName, 'stats');
+      log('═══════════════════════════════════════════════════', 'stats');
+
+      // ========== Step 5: 生成 Lite 版 (convertLite.js 逻辑) ==========
+      log('', '');
+      log('╔═══════════════════════════════════════════════════╗', 'title');
+      log('║         OpenClash 极简版转换 (Lite)               ║', 'title');
+      log('╚═══════════════════════════════════════════════════╝', 'title');
+
+      // 深拷贝一份 config 用于 Lite 处理
+      let liteConfig = jsyaml.load(jsyaml.dump(config, { lineWidth: -1 }));
+
+      const originalProxyCount = liteConfig.proxies?.length || 0;
+      const originalGroupCount = liteConfig['proxy-groups']?.length || 0;
+
+      // 过滤代理节点：保留"实验性"节点 + 倍率 < 1x 的节点
+      // 未标注倍率的普通节点视为 1x，不保留
+      const liteMultiplierRegex = /(?<=[xX✕✖⨉倍率])([1-9]+(\.\d+)*|0{1}\.\d+)(?=[xX✕✖⨉倍率])*/i;
+      if (liteConfig.proxies && Array.isArray(liteConfig.proxies)) {
+        liteConfig.proxies = liteConfig.proxies.filter((proxy) => {
+          const specialNodes = ['直连', 'DIRECT', 'REJECT', '拒绝', '全球直连'];
+          if (specialNodes.some((s) => proxy.name.includes(s))) return true;
+          if (proxy.name.includes('实验性')) return true;
+          // 有显式倍率标注且 < 1 的节点保留
+          const match = liteMultiplierRegex.exec(proxy.name);
+          if (match) return parseFloat(match[1]) < 1;
+          return false; // 无倍率标注的普通节点不保留
+        });
+      }
+
+      const remainingProxyNames = new Set(
+        (liteConfig.proxies || []).map((p) => p.name)
+      );
+
+      log('✅ 代理节点: ' + originalProxyCount + ' -> ' + remainingProxyNames.size + ' (仅保留"实验性"节点)', 'info');
+
+      // 更新策略组中的节点引用
+      if (liteConfig['proxy-groups'] && Array.isArray(liteConfig['proxy-groups'])) {
+        liteConfig['proxy-groups'] = liteConfig['proxy-groups']
+          .map((group) => {
+            if (group.proxies && Array.isArray(group.proxies)) {
+              const groupNames = new Set(
+                liteConfig['proxy-groups'].map((g) => g.name)
+              );
+              group.proxies = group.proxies.filter((proxyName) => {
+                const builtInPolicies = ['DIRECT', 'REJECT', '直连', '拒绝'];
+                return (
+                  remainingProxyNames.has(proxyName) ||
+                  groupNames.has(proxyName) ||
+                  builtInPolicies.includes(proxyName)
+                );
+              });
+            }
+            return group;
+          })
+          .filter((group) => group.proxies && group.proxies.length > 0);
+      }
+
+      // 删除各地区的自动测速分组（统一"自动测速"已在 Clash.js 中创建）
+      if (liteConfig['proxy-groups']) {
+        liteConfig['proxy-groups'] = liteConfig['proxy-groups'].filter(
+          (group) => !group.name.startsWith('自动测速-')
+        );
+
+        // 替换所有分组中对"自动测速-XXX"的引用为"自动测速"
+        liteConfig['proxy-groups'] = liteConfig['proxy-groups'].map((group) => {
+          if (group.proxies) {
+            group.proxies = group.proxies.map((proxyName) => {
+              if (proxyName.startsWith('自动测速-')) {
+                return '自动测速';
+              }
+              return proxyName;
+            });
+            group.proxies = [...new Set(group.proxies)];
+          }
+          return group;
+        });
+      }
+
+      // 二次清理：移除引用了已删除分组的节点
+      let prevCount = -1;
+      while (
+        prevCount !== (liteConfig['proxy-groups']?.length || 0) &&
+        liteConfig['proxy-groups']
+      ) {
+        prevCount = liteConfig['proxy-groups'].length;
+        const validGroupNames = new Set(
+          liteConfig['proxy-groups'].map((g) => g.name)
+        );
+
+        liteConfig['proxy-groups'] = liteConfig['proxy-groups']
+          .map((group) => {
+            if (group.proxies) {
+              group.proxies = group.proxies.filter((proxyName) => {
+                const builtInPolicies = ['DIRECT', 'REJECT', '直连', '拒绝'];
+                return (
+                  remainingProxyNames.has(proxyName) ||
+                  validGroupNames.has(proxyName) ||
+                  builtInPolicies.includes(proxyName)
+                );
+              });
+            }
+            return group;
+          })
+          .filter((group) => group.proxies && group.proxies.length > 0);
+      }
+
+      const finalGroupCount = liteConfig['proxy-groups']?.length || 0;
+      log('✅ 策略分组: ' + originalGroupCount + ' -> ' + finalGroupCount + ' (已移除空分组)', 'info');
+
+      // 生成 Lite 版 YAML
+      const liteYaml = jsyaml.dump(liteConfig, { lineWidth: -1 });
+      const liteFileName = baseName + '_lite.yaml';
+      const liteBlob = new Blob([liteYaml], { type: 'application/x-yaml;charset=utf-8' });
+
+      const liteStats = {
+        proxies: liteConfig.proxies?.length || 0,
+        proxiesOrig: originalProxyCount,
+        groups: finalGroupCount,
+        groupsOrig: originalGroupCount,
+        rules: liteConfig.rules?.length || 0,
+        providers: Object.keys(liteConfig['rule-providers'] || {}).length,
+      };
+
+      outputBlobs.lite = { blob: liteBlob, name: liteFileName, stats: liteStats };
+
+      log('', '');
+      log('═══════════════════════════════════════════════════', 'stats');
+      log('📊 Lite 版统计:', 'stats');
+      log('   代理节点: ' + liteStats.proxies + ' 个 (原 ' + liteStats.proxiesOrig + ' 个)', 'stats');
+      log('   策略组: ' + liteStats.groups + ' 个 (原 ' + liteStats.groupsOrig + ' 个)', 'stats');
+      log('   规则: ' + liteStats.rules + ' 条', 'stats');
+      log('   规则集: ' + liteStats.providers + ' 个', 'stats');
+      log('   输出文件: ' + liteFileName, 'stats');
+      log('═══════════════════════════════════════════════════', 'stats');
+
+      log('', '');
+      log('✅ 全部转换完成！', 'info');
+
+      // ========== Step 6: 渲染结果 ==========
+      renderResults();
+
+    } catch (err) {
+      log('', '');
+      log('❌ 转换失败: ' + err.message, 'error');
+      if (err.stack) {
+        log(err.stack, 'error');
+      }
+    } finally {
+      convertBtn.disabled = false;
+      convertBtn.innerHTML = '🚀 开始转换';
+    }
+  }
+
+  // ==================== 渲染结果 ====================
+  function renderResults() {
+    resultsList.innerHTML = '';
+
+    if (outputBlobs.full) {
+      const s = outputBlobs.full.stats;
+      resultsList.innerHTML += createResultItem(
+        'full', 'Full', '普通版',
+        outputBlobs.full.name,
+        s.proxies + ' 节点 · ' + s.groups + ' 分组 · ' + s.rules + ' 规则 · ' + s.providers + ' 规则集'
+      );
+    }
+
+    if (outputBlobs.lite) {
+      const s = outputBlobs.lite.stats;
+      resultsList.innerHTML += createResultItem(
+        'lite', 'Lite', '精简版',
+        outputBlobs.lite.name,
+        s.proxies + ' 节点 · ' + s.groups + ' 分组 · ' + s.rules + ' 规则 · ' + s.providers + ' 规则集'
+      );
+    }
+
+    resultsCard.classList.add('visible');
+
+    // 绑定下载事件
+    document.querySelectorAll('.download-btn[data-type]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const type = btn.getAttribute('data-type');
+        if (outputBlobs[type]) {
+          triggerDownload(outputBlobs[type].blob, outputBlobs[type].name);
+        }
+      });
+    });
+  }
+
+  function createResultItem(type, badge, label, name, statsText) {
+    return `
+      <div class="result-item">
+        <div class="result-info">
+          <span class="result-badge ${type}">${badge}</span>
+          <div class="result-meta">
+            <div class="result-name">${name}</div>
+            <div class="result-stats">${statsText}</div>
+          </div>
+        </div>
+        <button class="download-btn" data-type="${type}">📥 下载${label}</button>
+      </div>
+    `;
+  }
+
+  // ==================== 下载工具 ====================
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  downloadAll.addEventListener('click', () => {
+    Object.keys(outputBlobs).forEach((key) => {
+      const item = outputBlobs[key];
+      if (item) triggerDownload(item.blob, item.name);
+    });
+  });
+
+})();
+</script>
+
+</body>
+</html>
