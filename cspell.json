@@ -4,7 +4,9 @@
     "js-yaml.js",
     "node_modules",
     "*.yaml",
-    "*.yml"
+    "*.yml",
+    ".gitignore",
+    ".gemini/**"
   ],
   "words": [
     "jsyaml",
@@ -92,6 +94,29 @@
     "qpic",
     "gtimg",
     "Rockstar",
-    "Battl"
+    "Battl",
+    "DDNS",
+    "vrch",
+    "bahamut",
+    "pixiv",
+    "Pixiv",
+    "biliintl",
+    "primevideo",
+    "localdomain",
+    "msftconnecttest",
+    "msftncsi",
+    "Loyalsoldier",
+    "Sunlogin",
+    "memconservative",
+    "googleusercontent",
+    "fbcdn",
+    "Mijia",
+    "oray",
+    "geox",
+    "metadb",
+    "mmdb",
+    "grazie",
+    "httpdns",
+    "IEPL"
   ]
 }
