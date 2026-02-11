@@ -11,6 +11,9 @@
  * - 两者核心区别：fallback 不关心延迟只关心存活，url-test 兼顾延迟和存活
  * - 当前 url-test + tolerance: 50 已覆盖 fallback 的主要价值
  * - 加 fallback 会使策略组数量翻倍，UI 复杂度暴增，实际收益极小
+ * 
+ * If use node：
+ * - node convert.js source.yaml source_openclash.yaml Clash.js ; node convertLite.js source_openclash.yaml
  */
 
 /**
@@ -411,6 +414,10 @@ const dnsConfig = {
     "+.msftconnecttest.com",
     "+.msftncsi.com",
     "+.market.xiaomi.com",
+    // SSH 协议不在 Sniffer 嗅探范围，Fake-IP 会导致 git push/pull 失败
+    "+.github.com",
+    "+.gitlab.com",
+    "+.bitbucket.org",
     "geosite:cn",                    // 国内域名返回真实 IP
     "geosite:private",               // 内网域名
     "geosite:apple@cn",              // 苹果国内服务
