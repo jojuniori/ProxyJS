@@ -253,6 +253,29 @@ const customRules = [
   "DOMAIN-SUFFIX,recaptcha.net,默认节点",
   "DOMAIN-KEYWORD,kemono,默认节点",
   "DOMAIN-SUFFIX,api.telegram.org,TG-BOT-API",
+
+  // ============================================
+  // Binance 交易所完整规则
+  // ============================================
+  // Binance 核心交易所域名
+  "DOMAIN-SUFFIX,binance.com,Binance",
+  "DOMAIN-SUFFIX,binance.us,Binance",
+  "DOMAIN-SUFFIX,binance.org,Binance",
+  "DOMAIN-SUFFIX,binance.cloud,Binance",
+  "DOMAIN-SUFFIX,binance.info,Binance",
+  "DOMAIN-SUFFIX,binance.me,Binance",
+  // Binance 中国大陆备用域名
+  "DOMAIN-SUFFIX,binancecom.net,Binance",
+  "DOMAIN-SUFFIX,binance8080.com,Binance",
+  "DOMAIN-SUFFIX,binancedown.com,Binance",
+  "DOMAIN-SUFFIX,binance2.com,Binance",
+  "DOMAIN-SUFFIX,binanceru.net,Binance",
+  // Binance 静态资源 CDN
+  "DOMAIN-SUFFIX,bnbstatic.com,Binance",
+  // BNB Chain 生态
+  "DOMAIN-SUFFIX,bnbchain.org,Binance",
+  // Binance 兜底关键词匹配（覆盖未来新增子域名）
+  "DOMAIN-KEYWORD,binance,Binance",
 ];
 
 /**
@@ -283,6 +306,7 @@ const ruleOptions = {
   whatsapp: false, // Whatsapp
   games: true, // 游戏策略组
   japan: true, // 日本网站策略组
+  binance: true, // Binance 交易所
   tracker: false, // 网络分析和跟踪服务
   ads: false, // 常见的网络广告
 };
@@ -724,6 +748,7 @@ function main(config) {
   }
 
   const hasUSProxy = proxyGroupsRegionNames.includes("US美国");
+  const hasSGProxy = proxyGroupsRegionNames.includes("SG新加坡");
   const hasJPProxy = proxyGroupsRegionNames.includes("JP日本");
   const hasJPAutoProxy = proxyGroupsRegionNames.includes("自动测速-JP日本");
   const hasSGAutoProxy = proxyGroupsRegionNames.includes("自动测速-SG新加坡");
@@ -1108,6 +1133,32 @@ function main(config) {
       proxies: jpProxies,
       url: "https://r.r10s.jp/com/img/home/logo/touch.png",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/JP.png",
+    });
+  }
+
+  if (ruleOptions.binance) {
+    // Binance：US美国 优先，SG新加坡 备选
+    // Binance 全球版主要服务器在美国，SG 作为亚洲最近的合规节点备选
+    const binanceProxies = (() => {
+      const base = ["默认节点", ...proxyGroupsRegionNames, "直连"];
+      if (hasUSProxy && hasSGProxy) {
+        // US 优先，SG 第二
+        return ["US美国", "SG新加坡", ...base.filter(n => n !== "US美国" && n !== "SG新加坡")];
+      } else if (hasUSProxy) {
+        return ["US美国", ...base.filter(n => n !== "US美国")];
+      } else if (hasSGProxy) {
+        // 无 US 节点时 SG 顶上
+        return ["SG新加坡", ...base.filter(n => n !== "SG新加坡")];
+      }
+      return base;
+    })();
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "Binance",
+      type: "select",
+      proxies: binanceProxies,
+      url: "https://www.binance.com/favicon.ico",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Cryptocurrency_3.png",
     });
   }
 
