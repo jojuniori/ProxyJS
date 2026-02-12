@@ -550,6 +550,9 @@ function main(config) {
 
   config["mode"] = "rule";
 
+  // 设置日志等级为 warning，减少路由器 IO 压力
+  config["log-level"] = "warning";
+
   // 覆盖原配置中DNS配置
   config["dns"] = dnsConfig;
 
