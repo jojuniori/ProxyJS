@@ -109,9 +109,10 @@ const customRules = [
   // ============================================
   // AI 工具
   // ============================================
-  "PROCESS-PATH-REGEX,.*Antigravity.*,国外AI",
-  "PROCESS-PATH-REGEX,.*Cursor.*,国外AI",
-  "PROCESS-PATH-REGEX,.*VSCode.*,国外AI",
+  "PROCESS-PATH-REGEX,.*Antigravity.*,谷歌服务",
+  "DOMAIN-KEYWORD,antigravity,谷歌服务",
+  "PROCESS-PATH-REGEX,.*Cursor.*,其他AI",
+  "PROCESS-PATH-REGEX,.*VSCode.*,其他AI",
 
   // ============================================
   // Meta / Oculus 服务 - 强制走美国
@@ -781,10 +782,95 @@ function main(config) {
   });
 
   if (ruleOptions.openai) {
+    const jpFirstProxies = Array.from(
+      new Set(
+        hasJPProxy
+          ? ["JP日本", "默认节点", ...proxyGroupsRegionNames, "直连"]
+          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
+      )
+    );
+
+    const usFirstProxies = Array.from(
+      new Set(
+        hasUSProxy
+          ? ["US美国", "默认节点", ...proxyGroupsRegionNames, "直连"]
+          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
+      )
+    );
+
+    // Claude Code
     rules.push(
-      "DOMAIN-SUFFIX,grazie.ai,国外AI",
-      "DOMAIN-SUFFIX,grazie.aws.intellij.net,国外AI",
-      "RULE-SET,ai,国外AI"
+      "DOMAIN-SUFFIX,anthropic.com,Claude Code",
+      "DOMAIN-SUFFIX,claude.ai,Claude Code",
+      "DOMAIN-KEYWORD,claude,Claude Code",
+      "DOMAIN-SUFFIX,anthropic.com.cdn.cloudflare.net,Claude Code"
+    );
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "Claude Code",
+      type: "select",
+      proxies: jpFirstProxies,
+      url: "https://www.anthropic.com",
+      icon: "https://fastly.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/png/claude-ai.png",
+    });
+
+    // Openai
+    rules.push(
+      "DOMAIN-SUFFIX,openai.com,Openai",
+      "DOMAIN-SUFFIX,chatgpt.com,Openai",
+      "DOMAIN-SUFFIX,oaistatic.com,Openai",
+      "DOMAIN-SUFFIX,oaiusercontent.com,Openai"
+    );
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "Openai",
+      type: "select",
+      proxies: jpFirstProxies,
+      url: "https://chat.openai.com/cdn-cgi/trace",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png",
+    });
+
+    // Gemini
+    rules.push(
+      "DOMAIN-SUFFIX,gemini.google.com,Gemini",
+      "DOMAIN-SUFFIX,bard.google.com,Gemini",
+      "DOMAIN-SUFFIX,generativelanguage.googleapis.com,Gemini",
+      "DOMAIN-SUFFIX,generativeai.google,Gemini",
+      "DOMAIN-KEYWORD,gemini,Gemini"
+    );
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "Gemini",
+      type: "select",
+      proxies: usFirstProxies,
+      url: "https://gemini.google.com",
+      icon: "https://fastly.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/png/google-gemini.png",
+    });
+
+    // Minimax
+    rules.push(
+      "DOMAIN-SUFFIX,minimax.chat,Minimax",
+      "DOMAIN-SUFFIX,minimaxi.com,Minimax",
+      "DOMAIN-SUFFIX,minimax.io,Minimax",
+      "DOMAIN-SUFFIX,hailuoai.com,Minimax",
+      "DOMAIN-SUFFIX,hailuoai.video,Minimax",
+      "DOMAIN-KEYWORD,minimax,Minimax",
+      "DOMAIN-KEYWORD,hailuoai,Minimax"
+    );
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "Minimax",
+      type: "select",
+      proxies: jpFirstProxies,
+      url: "https://hailuoai.video/",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Bot.png",
+    });
+
+    // 其他AI
+    rules.push(
+      "DOMAIN-SUFFIX,grazie.ai,其他AI",
+      "DOMAIN-SUFFIX,grazie.aws.intellij.net,其他AI",
+      "RULE-SET,ai,其他AI"
     );
     ruleProviders.set("ai", {
       ...ruleProviderCommon,
@@ -793,22 +879,12 @@ function main(config) {
       url: "https://github.com/dahaha-365/YaNet/raw/refs/heads/dist/rulesets/mihomo/ai.list",
       path: "./ruleset/YaNet/ai.list",
     });
-    // [优化] 国外AI：JP日本 优先排序
-    // 日本节点对 OpenAI/Claude 等 AI 服务延迟更低
-    const aiProxies = Array.from(
-      new Set(
-        hasJPProxy
-          ? ["JP日本", "默认节点", ...proxyGroupsRegionNames, "直连"]
-          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
-      )
-    );
     config["proxy-groups"].push({
       ...groupBaseOption,
-      name: "国外AI",
+      name: "其他AI",
       type: "select",
-      proxies: aiProxies,
-      url: "https://chat.openai.com/cdn-cgi/trace",
-      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png",
+      proxies: jpFirstProxies,
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Bot.png",
     });
   }
 
@@ -831,12 +907,8 @@ function main(config) {
 
   if (ruleOptions.telegram) {
     rules.push("GEOIP,telegram,Telegram");
-    // [优化] Telegram：HK香港 优先排序
-    // TG 虽然服务器在 SG 但对 HK 节点连接传输速度相对较快
-    const hasHKProxy = proxyGroupsRegionNames.includes("HK香港");
-    const tgProxies = hasHKProxy
-      ? ["HK香港", "默认节点", ...proxyGroupsRegionNames.filter(n => n !== "HK香港"), "直连"]
-      : ["默认节点", ...proxyGroupsRegionNames, "直连"];
+    // [设置] TG默认改回默认
+    const tgProxies = ["默认节点", ...proxyGroupsRegionNames, "直连"];
     config["proxy-groups"].push({
       ...groupBaseOption,
       name: "Telegram",
@@ -1080,7 +1152,7 @@ function main(config) {
       ...groupBaseOption,
       name: "苹果服务",
       type: "select",
-      proxies: ["默认节点", ...proxyGroupsRegionNames, "直连"],
+      proxies: ["直连", "默认节点", ...proxyGroupsRegionNames],
       url: "http://www.apple.com/library/test/success.html",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple_2.png",
     });
@@ -1088,11 +1160,18 @@ function main(config) {
 
   if (ruleOptions.google) {
     rules.push("GEOSITE,google,谷歌服务");
+    const googleProxies = Array.from(
+      new Set(
+        hasUSProxy
+          ? ["US美国", "默认节点", ...proxyGroupsRegionNames, "直连"]
+          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
+      )
+    );
     config["proxy-groups"].push({
       ...groupBaseOption,
       name: "谷歌服务",
       type: "select",
-      proxies: ["默认节点", ...proxyGroupsRegionNames, "直连"],
+      proxies: googleProxies,
       url: "http://www.google.com/generate_204",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Google_Search.png",
     });
