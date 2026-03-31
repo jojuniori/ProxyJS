@@ -39,6 +39,7 @@ const customRules = [
   "DOMAIN-SUFFIX,fastly.net,直连",
   "DOMAIN-SUFFIX,edgecastcdn.net,直连",
   "DOMAIN-SUFFIX,edgesuite.net,直连",
+  "DOMAIN-SUFFIX,vrmoqu.com,直连",
   "DOMAIN-SUFFIX,vrmoo.co,直连",
   "DOMAIN-SUFFIX,quip.com,直连",
   "DOMAIN-KEYWORD,atianqi,直连",
@@ -798,6 +799,14 @@ function main(config) {
       )
     );
 
+    const sgFirstProxies = Array.from(
+      new Set(
+        hasSGProxy
+          ? ["SG新加坡", "默认节点", ...proxyGroupsRegionNames, "直连"]
+          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
+      )
+    );
+
     // Claude Code
     rules.push(
       "DOMAIN-SUFFIX,anthropic.com,Claude Code",
@@ -809,7 +818,7 @@ function main(config) {
       ...groupBaseOption,
       name: "Claude Code",
       type: "select",
-      proxies: jpFirstProxies,
+      proxies: sgFirstProxies,
       url: "https://www.anthropic.com",
       icon: "https://fastly.jsdelivr.net/gh/homarr-labs/dashboard-icons@main/png/claude-ai.png",
     });
@@ -825,7 +834,7 @@ function main(config) {
       ...groupBaseOption,
       name: "Openai",
       type: "select",
-      proxies: jpFirstProxies,
+      proxies: usFirstProxies,
       url: "https://chat.openai.com/cdn-cgi/trace",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/ChatGPT.png",
     });
