@@ -1156,12 +1156,31 @@ function main(config) {
   }
 
   if (ruleOptions.apple) {
-    rules.push("GEOSITE,apple-cn,苹果服务");
+    rules.push("GEOSITE,apple-cn,苹果国内", "GEOSITE,apple,苹果国外");
+    
+    // 苹果国内 - 默认直连
     config["proxy-groups"].push({
       ...groupBaseOption,
-      name: "苹果服务",
+      name: "苹果国内",
       type: "select",
       proxies: ["直连", "默认节点", ...proxyGroupsRegionNames],
+      url: "http://www.apple.com/library/test/success.html",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple_2.png",
+    });
+
+    // 苹果国外 - 默认美国优先
+    const appleIntlProxies = Array.from(
+      new Set(
+        hasUSProxy
+          ? ["US美国", "默认节点", ...proxyGroupsRegionNames, "直连"]
+          : ["默认节点", ...proxyGroupsRegionNames, "直连"]
+      )
+    );
+    config["proxy-groups"].push({
+      ...groupBaseOption,
+      name: "苹果国外",
+      type: "select",
+      proxies: appleIntlProxies,
       url: "http://www.apple.com/library/test/success.html",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Apple_2.png",
     });
