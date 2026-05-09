@@ -787,11 +787,11 @@ function main(config) {
       ...groupBaseOption,
       name: "故障转移",
       type: "fallback",
-      interval: 60, // 每分钟对组内节点测延迟
-      timeout: 150, // 超过150ms延迟不予采用，自动fallback到下一个
+      interval: 60,
+      timeout: 500, // 放宽到 500ms，超500才视同掉线
       url: "http://cp.cloudflare.com/generate_204",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Available.png",
-      proxies: failoverProxies,
+      proxies: [...failoverProxies, "自动测速-全部"], // 把全局测速直接追加在最后兜底
     });
   }
 
@@ -810,11 +810,11 @@ function main(config) {
       ...groupBaseOption,
       name: "故障转移-低倍率节点",
       type: "fallback",
-      interval: 70, 
-      timeout: 150, 
+      interval: 60,
+      timeout: 500, // 放宽到 500ms
       url: "http://cp.cloudflare.com/generate_204",
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Available.png",
-      proxies: lowRatioFailoverProxies,
+      proxies: [...lowRatioFailoverProxies, "自动测速-全部"], // 追加在最后兜底
     });
   }
 
