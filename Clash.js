@@ -685,6 +685,16 @@ function main(config) {
         return b.name;
       });
 
+    let lowRatioProxies = config.proxies
+      .filter((a) => {
+        if (!a.name.match(region.regex)) return false;
+        if (a.name.includes('实验性')) return true;
+        const match = multiplierRegex.exec(a.name);
+        if (match) return parseFloat(match[1]) < 1;
+        return false;
+      })
+      .map((b) => b.name);
+
     /**
      * 必须再判断一下有没有符合要求的代理节点
      * 没有的话，这个策略组就不应该存在
@@ -711,15 +721,44 @@ function main(config) {
         name: `自动测速-${region.name}`, // 自动测速策略组名称
         type: "url-test",
         tolerance: 50, // 容忍延迟
-        interval: 60, // 每分钟自动测速
         url: "http://cp.cloudflare.com/generate_204", // 测速 URL
         icon: region.icon,
         proxies: proxies,
       });
     }
 
+    if (lowRatioProxies.length > 0) {
+      regionProxyGroups.push({
+        ...groupBaseOption,
+        name: `低倍自动测速-${region.name}`,
+        type: "url-test",
+        tolerance: 50,
+        url: "http://cp.cloudflare.com/generate_204",
+        icon: region.icon,
+        hidden: true, // [新增] 在 UI 中隐藏这些中间子分组，避免视觉冗余
+        proxies: lowRatioProxies,
+      });
+    }
+
     otherProxyGroups = otherProxyGroups.filter((x) => !proxies.includes(x));
   });
+
+  // 统一自动测速分组：收集所有代理节点（Lite 版中节点已被精简，自然只含实验性节点）
+  const allProxyNames = config.proxies
+    .filter((p) => p.type !== 'direct')
+    .map((p) => p.name);
+  const globalUrlTestGroup = [];
+  if (allProxyNames.length > 0) {
+    globalUrlTestGroup.push({
+      ...groupBaseOption,
+      name: '自动测速-全部',
+      type: 'url-test',
+      tolerance: 50,
+      interval: 60, // 统一的底层测速引擎，每分钟刷新所有节点数据
+      proxies: allProxyNames,
+      icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png',
+    });
+  }
 
   // 将自动测速的策略组移到不自动测速的策略组之后
   const selectGroups = regionProxyGroups.filter(
@@ -728,22 +767,10 @@ function main(config) {
   const urlTestGroups = regionProxyGroups.filter(
     (group) => group.type === "url-test"
   );
-  regionProxyGroups = [...selectGroups, ...urlTestGroups];
+  // 重组顺序：手选固定(select) -> 自动测速-全部 -> 各国自动测速(url-test)
+  regionProxyGroups = [...selectGroups, ...globalUrlTestGroup, ...urlTestGroups];
 
-  // 统一自动测速分组：收集所有代理节点（Lite 版中节点已被精简，自然只含实验性节点）
-  const allProxyNames = config.proxies
-    .filter((p) => p.type !== 'direct')
-    .map((p) => p.name);
-  if (allProxyNames.length > 0) {
-    regionProxyGroups.push({
-      ...groupBaseOption,
-      name: '自动测速',
-      type: 'url-test',
-      tolerance: 50,
-      proxies: allProxyNames,
-      icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png',
-    });
-  }
+  const failoverGroups = [];
 
   // [新增] 故障转移分组
   const failoverOrder = ["HK香港", "JP日本", "SG新加坡", "TW台湾"];
@@ -755,7 +782,7 @@ function main(config) {
   });
 
   if (failoverProxies.length > 0) {
-    regionProxyGroups.push({
+    failoverGroups.push({
       ...groupBaseOption,
       name: "故障转移",
       type: "fallback",
@@ -767,9 +794,33 @@ function main(config) {
     });
   }
 
-  const proxyGroupsRegionNames = regionProxyGroups.map((value) => {
-    return value.name;
+  // [新增] 故障转移-低倍率节点 分组
+  const allRegionNames = regionOptions.regions.map(r => r.name);
+  const lowRatioFailoverOrder = [...failoverOrder, ...allRegionNames.filter(n => !failoverOrder.includes(n))];
+  const lowRatioFailoverProxies = [];
+  lowRatioFailoverOrder.forEach((regionName) => {
+    if (regionProxyGroups.some(g => g.name === `低倍自动测速-${regionName}`)) {
+      lowRatioFailoverProxies.push(`低倍自动测速-${regionName}`);
+    }
   });
+
+  if (lowRatioFailoverProxies.length > 0) {
+    failoverGroups.push({
+      ...groupBaseOption,
+      name: "故障转移-低倍率节点",
+      type: "fallback",
+      interval: 70, 
+      timeout: 150, 
+      url: "http://cp.cloudflare.com/generate_204",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Available.png",
+      proxies: lowRatioFailoverProxies,
+    });
+  }
+
+  const proxyGroupsRegionNames = [
+    ...failoverGroups.map(v => v.name),
+    ...regionProxyGroups.map(v => v.name)
+  ];
 
   if (otherProxyGroups.length > 0) {
     proxyGroupsRegionNames.push("其他节点");
@@ -796,6 +847,7 @@ function main(config) {
       proxies: defaultProxies,
       icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Proxy.png",
     },
+    ...failoverGroups
   ];
 
   config.proxies = config?.proxies || [];
