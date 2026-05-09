@@ -5,12 +5,11 @@
  * - 追加了对TG的自动测速分组
  * - 将分组分别分为了普通非测速固定和自动测速分开来
  *
- * [注] 不添加故障转移 (fallback) 分组的原因：
- * - fallback 按列表顺序使用第一个存活节点，仅在当前节点完全不通时才切换
- * - url-test (自动测速) 周期性测速并切到最快节点，tolerance: 50 已避免频繁跳切
- * - 两者核心区别：fallback 不关心延迟只关心存活，url-test 兼顾延迟和存活
- * - 当前 url-test + tolerance: 50 已覆盖 fallback 的主要价值
- * - 加 fallback 会使策略组数量翻倍，UI 复杂度暴增，实际收益极小
+ * [注] 故障转移 (fallback) 嵌套设计的目的：
+ * - 单纯的 url-test 虽能找最低延迟，但无法保证国家优先级（比如哪怕日本80ms，也要死守120ms的香港）。
+ * - 单纯的 fallback 虽能保证顺序，但不能挑延迟最低的（只会选顺序里的首个存活节点）。
+ * - 核心方案：采用 fallback 嵌套 url-test。外层 fallback(timeout: 150) 管国家顺序与熔断，内层 url-test 挑组内最快。
+ * - 结合底层复用 interval 的机制，极大降低了测速开销，完美实现“国家优先级 + 150ms 熔断 + 最低延迟”。
  * 
  * If use node：
  * - node convert.js source.yaml source_openclash.yaml Clash.js ; node convertLite.js source_openclash.yaml
@@ -721,6 +720,7 @@ function main(config) {
         name: `自动测速-${region.name}`, // 自动测速策略组名称
         type: "url-test",
         tolerance: 50, // 容忍延迟
+        interval: 60, // 必须保留：用于触发自身的节点切换轮询
         url: "http://cp.cloudflare.com/generate_204", // 测速 URL
         icon: region.icon,
         proxies: proxies,
@@ -733,6 +733,7 @@ function main(config) {
         name: `低倍自动测速-${region.name}`,
         type: "url-test",
         tolerance: 50,
+        interval: 60, // 必须保留：用于触发自身的节点切换轮询
         url: "http://cp.cloudflare.com/generate_204",
         icon: region.icon,
         hidden: true, // [新增] 在 UI 中隐藏这些中间子分组，避免视觉冗余
@@ -832,13 +833,23 @@ function main(config) {
   const hasJPAutoProxy = proxyGroupsRegionNames.includes("自动测速-JP日本");
   const hasSGAutoProxy = proxyGroupsRegionNames.includes("自动测速-SG新加坡");
 
-  // [优化] 默认节点 HK 优先排序
-  // 原脚本无排序，直接 [...regionNames, '直连']
-  // 通常情况下香港延迟最低，放首位减少手动选择
-  const hasHKProxyDefault = proxyGroupsRegionNames.includes("HK香港");
-  const defaultProxies = hasHKProxyDefault 
-    ? ["HK香港", ...proxyGroupsRegionNames.filter(n => n !== "HK香港"), "直连"]
-    : [...proxyGroupsRegionNames, "直连"];
+  // [优化] 默认节点优先排序
+  // 优先级：故障转移-低倍率节点 > 故障转移 > HK香港 > 其他节点
+  const prioritized = [];
+  const addIfExist = (name) => {
+    if (proxyGroupsRegionNames.includes(name)) {
+      prioritized.push(name);
+    }
+  };
+  addIfExist("故障转移-低倍率节点");
+  addIfExist("故障转移");
+  addIfExist("HK香港");
+
+  const defaultProxies = [
+    ...prioritized,
+    ...proxyGroupsRegionNames.filter(n => !prioritized.includes(n)),
+    "直连"
+  ];
   config["proxy-groups"] = [
     {
       ...groupBaseOption,
