@@ -711,6 +711,7 @@ function main(config) {
         name: `自动测速-${region.name}`, // 自动测速策略组名称
         type: "url-test",
         tolerance: 50, // 容忍延迟
+        interval: 60, // 每分钟自动测速
         url: "http://cp.cloudflare.com/generate_204", // 测速 URL
         icon: region.icon,
         proxies: proxies,
@@ -741,6 +742,28 @@ function main(config) {
       tolerance: 50,
       proxies: allProxyNames,
       icon: 'https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Auto.png',
+    });
+  }
+
+  // [新增] 故障转移分组
+  const failoverOrder = ["HK香港", "JP日本", "SG新加坡", "TW台湾"];
+  const failoverProxies = [];
+  failoverOrder.forEach((regionName) => {
+    if (regionProxyGroups.some(g => g.name === `自动测速-${regionName}`)) {
+      failoverProxies.push(`自动测速-${regionName}`);
+    }
+  });
+
+  if (failoverProxies.length > 0) {
+    regionProxyGroups.push({
+      ...groupBaseOption,
+      name: "故障转移",
+      type: "fallback",
+      interval: 60, // 每分钟对组内节点测延迟
+      timeout: 150, // 超过150ms延迟不予采用，自动fallback到下一个
+      url: "http://cp.cloudflare.com/generate_204",
+      icon: "https://fastly.jsdelivr.net/gh/Koolson/Qure/IconSet/Color/Available.png",
+      proxies: failoverProxies,
     });
   }
 

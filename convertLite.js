@@ -93,27 +93,6 @@ try {
       });
   }
 
-  // 5. 删除各地区的自动测速分组（统一"自动测速"已在 Clash.js 中创建）
-  if (config["proxy-groups"]) {
-    config["proxy-groups"] = config["proxy-groups"].filter(
-      (group) => !group.name.startsWith("自动测速-")
-    );
-
-    // 替换所有分组中对"自动测速-XXX"的引用为"自动测速"
-    config["proxy-groups"] = config["proxy-groups"].map((group) => {
-      if (group.proxies) {
-        group.proxies = group.proxies.map((proxyName) => {
-          if (proxyName.startsWith("自动测速-")) {
-            return "自动测速";
-          }
-          return proxyName;
-        });
-        // 去重
-        group.proxies = [...new Set(group.proxies)];
-      }
-      return group;
-    });
-  }
 
   // 6. 二次清理：移除引用了已删除分组的节点
   // 由于分组可能相互引用，需要多次迭代直到稳定
